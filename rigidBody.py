@@ -32,7 +32,7 @@ class rigidBody(object):
     def setParameter(self, arg):
         if self.joint_type ==JOINT_TYPE[0]:
             #revolute
-            self.theta = arg
+            self.theta = arg/180.0*np.pi
         elif self.joint_type == JOINT_TYPE[1]:
             #prismatic
             self.d = arg
@@ -40,8 +40,9 @@ class rigidBody(object):
             #base link0
             pass
 
-    def moveIt(self):
-        pass
+    def moveIt(self,arg):
+        self.setParameter(arg)
+        self.AMatrix = self.generateHomogeneousMatrix()
 
     def generateHomogeneousMatrix(self):
         '''
@@ -76,30 +77,16 @@ class rigidBody(object):
         return  AMatrix
 
     def calculateJointCoord(self, last_joint_coord, TMatrix):
-        #self.joint_coord = np.dot(self.AMatrix, last_joint_coord)
         self.head_joint_coord = last_joint_coord.reshape((3,1))
         self.end_joint_coord  = TMatrix[:3,-1].reshape((3,1))
-        #set_trace()
 
     def visualize(self):
-        #self.calculateJointCoord(last_joint_coord)
-        #print(self.head_joint_coord[0], self.end_joint_coord[0])
         x = np.linspace(self.head_joint_coord[0], self.end_joint_coord[0], 100)
         y = np.linspace(self.head_joint_coord[1], self.end_joint_coord[1], 100)
         z = np.linspace(self.head_joint_coord[2], self.end_joint_coord[2], 100)
         return x,y,z
         #rigidBody.ax.plot(x,y,z,'o-')
-    '''
-    def show_axis(self):
-        if show_axis:
-            x_axis = self.AMatrix[:,0]
-            y_axis = self.AMatrix[:,1]
-            z_axis = self.AMatrix[:,2]
-            for axis in [x_axis, y_axis, z_axis]:
-                x = np.linspace(-50, 50, 100)
-                y = np.linspace(self.head_joint_coord[1], self.end_joint_coord[1], 100)
-                z = np.linspace(self.head_joint_coord[2], self.end_joint_coord[2], 100)
-    '''
+
     def getInfo(self):
         print(self.link_name,'{')
         print('  theta:', self.theta, '\n  d:', self.d, '\n  a:', self.a, '\n  alpha:', self.alpha, '\n  AMatrix:', self.AMatrix)
@@ -113,10 +100,17 @@ if __name__ == '__main__':
     link0.visualize(np.array([0,0,0]))
     link0.getInfo()
 
-    #link1 = rigidBody('revolute', theta=0, d=20, a=0, alpha=0, link_name='link1')
-    #link1.visualize(np.array([0,0,0]))
-    #link1.getInfo()
     plt.show()
 
-
+    '''
+    def show_axis(self):
+        if show_axis:
+            x_axis = self.AMatrix[:,0]
+            y_axis = self.AMatrix[:,1]
+            z_axis = self.AMatrix[:,2]
+            for axis in [x_axis, y_axis, z_axis]:
+                x = np.linspace(-50, 50, 100)
+                y = np.linspace(self.head_joint_coord[1], self.end_joint_coord[1], 100)
+                z = np.linspace(self.head_joint_coord[2], self.end_joint_coord[2], 100)
+    '''
 
