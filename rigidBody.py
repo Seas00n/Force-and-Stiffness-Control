@@ -40,6 +40,12 @@ class rigidBody(object):
             #base link0
             pass
 
+    def getJointAngle(self):
+        if self.joint_type == 'revolute':
+            return self.theta*180.0/np.pi
+        else:
+            exit()
+ 
     def moveIt(self,arg):
         self.setParameter(arg)
         self.AMatrix = self.generateHomogeneousMatrix()
