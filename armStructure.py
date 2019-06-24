@@ -28,7 +28,7 @@ class armStructure(object):
         self.links.append(link)
         self.num_links += 1
     '''
-    kinematic 
+    kinematic
     '''
     def resetTMatrix(self):
         self.TMatrixs = []#[T_{00},[T_{01}, T_{02}, T_{03}, ....]
@@ -61,7 +61,7 @@ class armStructure(object):
     def inverseKinematic(self, delty):
         #if (np.linalg.matrix_rank(self.jacob_matrix) == self.jacob_matrix.shape[0]) and np.linalg.matrix_rank(self.jacob_matrix)  == self.jacob_matrix.shape[1]
         inverseJacobianXYPos = np.linalg.inv(self.jacob_matrix[:2])
-        delta_joint_variable = inverseJacobianXYPos.dot(np.array([[0],[delty]]))
+        delta_joint_variable = inverseJacobianXYPos.dot(np.array([[delty[0]],[delty[1]]]))
         q_list = []
         for i in range(self.num_links-1):
             res = self.links[i+1].getJointAngle() + float(delta_joint_variable[i])
@@ -85,14 +85,14 @@ class armStructure(object):
                 [j_vi] = Z_0_i-1 X (d_0_n - d_0_i-1)
                 [j_wi] = Z_0_i-1
                 joint i -> frame i-1
-                '''      
+                '''
                 z_0_iminus1 = self.TMatrixs[i-1][:-1, 2]
                 d_0_iminus1 = self.TMatrixs[i-1][:-1,-1]
                 d_0_n       = self.TMatrix[:-1,-1]
                 self.jacob_matrix[:3,i-1] = np.cross(z_0_iminus1, (d_0_n-d_0_iminus1))
-                self.jacob_matrix[3:,i-1] = z_0_iminus1   
+                self.jacob_matrix[3:,i-1] = z_0_iminus1
             else:
-                print('error') 
+                print('error')
                 exit()
         #print('jacob_matrix:   \n', self.jacob_matrix)
 
@@ -102,8 +102,8 @@ class armStructure(object):
         return self.jacob_matrix.T.dot(np.linalg.inv(self.jacob_matrix.dot(self.jacob_matrix.T)))
 
 
-    
-    def torque_displacement(self, delta_y):
+
+    def torque_displacement(self, dd):
         '''
         F=Kx
         torque=J_transpose*F +  torque_g
@@ -116,8 +116,11 @@ class armStructure(object):
         length2 = 0.06
 
         F =np.zeros((6,1))
-        delta_y = delta_y
-        delta_x = 0
+        delta_y = dd[1]
+        delta_x = dd[0]
+#        delta_y = dd
+#        delta_x = 0
+
         delta_displace = np.array([[delta_x],[delta_y]])
 
         F[:2] = np.dot(self.kmatrix, delta_displace)
@@ -148,19 +151,19 @@ class armStructure(object):
             torques = self.jacob_matrix.T.dot(F) + np.array([[1],[0]])
 
 
-        torques[0, np.where(torques[0]>3)]  = 3 
-        torques[0, np.where(torques[0]<-3)] = -3 
+        torques[0, np.where(torques[0]>3)]  = 3
+        torques[0, np.where(torques[0]<-3)] = -3
         torques[1, np.where(torques[1]>2)]  = 2
         torques[1, np.where(torques[1]<-2)] = -2
-                
+
         if self.armName=='1':
             F_res   = np.linalg.inv(self.jacob_matrix[:2,:].T).dot( torques -  np.array([[0.9],[0.9]]) )
-            F_res   = -np.linalg.norm(F_res)
+            F_res_norm   = -np.linalg.norm(F_res)
         else:
             F_res   = np.linalg.inv(self.jacob_matrix[:2,:].T).dot( torques - np.array([[1],[0]]) )
-            F_res   = -np.linalg.norm(F_res) + 10
+            F_res_norm   = -np.linalg.norm(F_res) + 10
 
-        return torques,delta_y,F_res
+        return torques,F_res_norm,F_res
 
     def visualize(self):
         x=[]
@@ -187,14 +190,14 @@ class Viewer(pyglet.window.Window):
     def __init__(self, links):
         super(Viewer, self).__init__(width=400, height=400, resizable=False, caption='Arm', vsync=False)
         pyglet.gl.glClearColor(1, 1, 1, 1)
-    
+
         self.batch = pyglet.graphics.Batch()
         self.arms = []
         self.joints = []
         print(links[0].getInfo())
         print(links[1].getInfo())
         print(links[2].getInfo())
-        
+
 
 
         self.arm1 = self.batch.add(
@@ -205,7 +208,7 @@ class Viewer(pyglet.window.Window):
 
         '''
         for i in range(len(links)):
-            
+
             self.arms.append(
                 self.batch.add(
                     2, pyglet.gl.GL_QUADS, None,
@@ -214,12 +217,12 @@ class Viewer(pyglet.window.Window):
                 )
             )
             print(sum(sum([links[i].head_joint_coord.tolist(), links[i].end_joint_coord.tolist()], []), []))
-            
+
             if i >0:
                 temp = self.batch.add(
                     2, pyglet.gl.GL_POINTS, None,
                     ('v3f',sum(sum([links[i].head_joint_coord.tolist(), links[i].head_joint_coord.tolist()], []), [])),
-                    ('c3B', (0, 0, 255)*2,))                
+                    ('c3B', (0, 0, 255)*2,))
                 self.joints.append(temp)
         '''
 
@@ -252,7 +255,7 @@ if __name__ == '__main__':
     ax.set_zlabel('z')
 
 
-###############arm1 
+###############arm1
     robotic_arm = armStructure('1')
     robotic_arm.addLink('nojoint',    0,  0,    0,  0,'link0')
     robotic_arm.addLink('revolute',  10,  0, 0.14,  0,'link1')
@@ -269,10 +272,10 @@ if __name__ == '__main__':
     robotic_arm.jacobianCalc()
 
     for i in range(iter_num):
-        torque,delta_x,F_res = robotic_arm.torque_displacement(delty)
+        torque,F_res = robotic_arm.torque_displacement(delty)
         torques[:,i] = torque.flatten()
-        delt_list.append(-delty)  
-        F_res_list.append(F_res)    
+        delt_list.append(-delty)
+        F_res_list.append(F_res)
         delty += -unit
         q_list = robotic_arm.inverseKinematic(-unit)
         robotic_arm.moveIt(q_list)
@@ -283,7 +286,7 @@ if __name__ == '__main__':
     lns2 = ax1.plot(delt_list, torques[1],  'p--',  color='b',  label='tor_2a')
     lns5 = ax2.plot(delt_list, F_res_list,  'p--',  color='b',  label='A')
 
-  
+
 
 ###############arm2
     robotic_arm2 = armStructure('2')
@@ -301,10 +304,10 @@ if __name__ == '__main__':
     robotic_arm2.jacobianCalc()
     #set_trace()
     for i in range(iter_num):
-        torque,delta_x,F_res = robotic_arm2.torque_displacement(delty)
+        torque,F_res = robotic_arm2.torque_displacement(delty)
         torques[:,i] = torque.flatten()
-        delt_list.append(-delty)  
-        F_res_list.append(F_res)    
+        delt_list.append(-delty)
+        F_res_list.append(F_res)
         delty += -unit
         q_list = robotic_arm2.inverseKinematic(-unit)
         robotic_arm2.moveIt(q_list)
@@ -322,7 +325,7 @@ if __name__ == '__main__':
     plt.legend(loc='best')
     #plt.ylim(-6,2.05)
     plt.grid()
-      
+
     plt.show()
     '''
     # kinetics
