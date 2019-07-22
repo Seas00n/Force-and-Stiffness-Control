@@ -15,8 +15,7 @@ def build_arm():
     robotic_arm.jacobianCalc()
     robotic_arm2.forwardKinematics()
     robotic_arm2.jacobianCalc()
-    return [robotic_arm2]
-
+    return [robotic_arm]
 	#return [robotic_arm, robotic_arm2]
 
 def deltdispcement_gen():
@@ -32,6 +31,7 @@ def  force_by_displacement(arm, dd):
         return torque,F,F_xy
 
 
+
 def main0():
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(211)
@@ -43,7 +43,7 @@ def main0():
 
     unit = 0.001  #later delete
     arms_list = build_arm()
-    deltdisp_list = deltdispcement_gen()
+    deltdisp_list = [(0,-0.001)]
 
     lns = []
     for arm in arms_list:
@@ -98,6 +98,8 @@ def main1():
         for dd in deltdisp_list:
             F_x = [];F_y=[]
             torques=np.zeros((2, iter_num))
+            arms_list = build_arm()
+            arm = arms_list[0]
             for cnt in range(iter_num):
                 torque,F, F_xy = force_by_displacement(arm, (dd[0]*cnt, dd[1]*cnt))
                 update_q_list = arm.inverseKinematic(dd)
@@ -116,26 +118,55 @@ def main1():
     plt.xlim(-50,50)
     plt.ylim(-50,50)
 
-    #plt.grid()
     plt.show()
 
+def main2():
+        fig1 = plt.figure()
+        #ax1 = fig1.add_subplot(211)
+        #ax2 = fig1.add_subplot(212)
+        iter_num = 30
+
+        arms_list = build_arm()
+        deltdisp_list = deltdispcement_gen()
+        x_res=[]
+        y_res =[]
+        lns = []
+
+        for arm in arms_list:
+            rst2 = arm.stiffness_polytobe()
+
+            for dd in deltdisp_list:
+                arms_list = build_arm()
+                arm = arms_list[0]
+                for cnt in range(iter_num):
+                    temp_x = cnt*dd[0]
+                    temp_y = cnt*dd[1]
+                    rst = arm.stiffness_eliposide(temp_x,temp_y)
+
+                    #update_q_list = arm.inverseKinematic(dd)
+                    #arm.moveIt(update_q_list)
+                    #arm.jacobianCalc()
+
+                    # store rst here
+                    if rst:
+                        x_res.append(temp_x)
+                        y_res.append(temp_y)
+
+            plt.plot(x_res, y_res,'o')
+            #set_trace()
+            plt.plot(rst2[0], rst2[1], 'r')
+
+        print('drawing')
+        #plt.set_ylabel('dF_y')
+        #plt.set_xlabel('dF_x')
+        #plt.legend(loc='best')
+        plt.xlim(-0.04,0.04)
+        plt.ylim(-0.04,0.04)
+
+        plt.show()
+
 if __name__ == '__main__':
-    main1()
+    main2()
 
 	#while True:
 	#	arm.render()
-
-'''
-def deltdispcement_gen():
-    unit = 0.001
-    dd = [(unit,0),  (unit/sqrt(2),unit/sqrt(2)), (0,unit), (-unit/sqrt(2),unit/sqrt(2)),
-          (-unit,0), (-unit/sqrt(2), -unit/sqrt(2)), (0,-unit), (unit/sqrt(2),-unit/sqrt(2)),
-          (unit*sqrt(3)/2, unit/2), (-unit*sqrt(3)/2, unit/2), (-unit*sqrt(3)/2, -unit/2), (unit*sqrt(3)/2, -unit/2),
-          (unit/2,unit*sqrt(3)/2), (-unit/2,unit*sqrt(3)/2),(-unit/2,-unit*sqrt(3)/2),(unit/2,-unit*sqrt(3)/2),
-          (unit/2,unit*sqrt(3)/2), (-unit/2,unit*sqrt(3)/2),(-unit/2,-unit*sqrt(3)/2),(unit/2,-unit*sqrt(3)/2),
-          (unit*0.93969,unit*0.342), (-unit*0.93969,unit*0.342),(-unit*0.93969,-unit*0.342),(unit*0.93969,-unit*0.342), #20
-          (unit*0.9848,unit*0.342), (unit*0.9848,-unit*0.342),(-unit*0.9848,-unit*0.342),(unit*0.9848,-unit*0.342)  #10
-          ]
-    #dd = [(0,-unit)]
-    return dd
-'''

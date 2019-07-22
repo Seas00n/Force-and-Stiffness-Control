@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from pdb import set_trace
 import pyglet
-
+import copy
+from sympy import Matrix, symbols
 debug_info = 0
 
 class armStructure(object):
@@ -68,7 +69,6 @@ class armStructure(object):
             q_list.append(res)
         return q_list
 
-
     '''
     force
     '''
@@ -124,29 +124,9 @@ class armStructure(object):
         delta_displace = np.array([[delta_x],[delta_y]])
 
         F[:2] = np.dot(self.kmatrix, delta_displace)
-        '''
-        jacobian_com1 = np.array([[-np.sin(theta1)*length1, 0],
-                                  [np.cos(theta1)*length1,  0]])
-        jacobian_com2 = np.array([[-np.sin(theta1)*length1*2-np.sin(theta1+theta2)*length2, -np.sin(theta1+theta2)*length2],
-                                  [ np.cos(theta1)*length1*2+np.cos(theta1+theta2)*length2,  np.cos(theta1+theta2)*length2]])
 
-        #torque_g  = jacobian_com1.T.dot(np.array([[G1],[0]])) + jacobian_com2.T.dot(np.array([[0],[G2]]))
-        torque_g  = jacobian_com1.T.dot(np.array([[0],[-G1]])) + jacobian_com2.T.dot(np.array([[0],[-G2]]))
-        torques = self.jacob_matrix.T.dot(F) + torque_g
-        '''
-
-        '''
-        torque_g = np.array([[-G1*np.cos(theta1)*length1 - G2* ( np.cos(theta1)*length1*2 + np.cos(theta1+theta2)*length2 )],
-                             [G2*np.cos(theta1+theta2)*length2]])
-
-        torque_g = np.array([[G1*np.cos(theta1)*length1 + G2* ( np.cos(theta1)*length1*2 + np.cos(theta1+theta2)*length2 )],
-                             [np.abs(G2*np.cos(theta1+theta2)*length2)]])
-        torques = self.jacob_matrix.T.dot(F) + torque_g
-
-        #set_trace()
-        '''
         if self.armName=='1':
-            torques = self.jacob_matrix.T.dot(F) + np.array([[0.9],[0.9]])
+            torques = self.jacob_matrix.T.dot(F) + np.array([[0.9],[0.8]])
         else:
             torques = self.jacob_matrix.T.dot(F) + np.array([[1],[0]])
 
@@ -157,13 +137,113 @@ class armStructure(object):
         torques[1, np.where(torques[1]<-2)] = -2
 
         if self.armName=='1':
-            F_res   = np.linalg.inv(self.jacob_matrix[:2,:].T).dot( torques -  np.array([[0.9],[0.9]]) )
+            F_res   = np.linalg.inv(self.jacob_matrix[:2,:].T).dot( torques -  np.array([[0.9],[0.8]]) )
             F_res_norm   = -np.linalg.norm(F_res)
         else:
             F_res   = np.linalg.inv(self.jacob_matrix[:2,:].T).dot( torques - np.array([[1],[0]]) )
             F_res_norm   = -np.linalg.norm(F_res) + 10
 
         return torques,F_res_norm,F_res
+
+    def stiffness_eliposide(self, xx, yy):
+        '''
+        x,y = symbols("x, y")
+        M = Matrix([[x],
+                    [y]])
+        '''
+        Kc = np.array([[1000, 200],
+                       [200, 2000]])
+        Kc_inv = np.linalg.inv(Kc)
+        #Gq     = np.array([[1.1],[0]])
+        Gq     = np.array([[0],[0]])
+        W_tau = np.array([[1/3.0, 0],
+                          [0, 1/2.0]])
+        A = Kc_inv.dot(np.linalg.inv(self.jacob_matrix[:2,:].T)).dot(Gq)
+        B = Kc.dot(self.jacob_matrix[:2,:]).dot(W_tau).dot(W_tau).dot(self.jacob_matrix[:2,:].T).dot(Kc)
+        dd = np.array([[xx],[yy]])
+        if (((dd+A).T).dot(B).dot(dd+A))>0.94 and (dd+A).T.dot(B).dot(dd+A)<1:
+            return 1
+        else:
+            return 0
+
+    def stiffness_polytobe2(self):
+        A = None
+        u, s, vh = np.linalg.svd(self.jacob_matrix[:2,:].T, full_matrices=True)
+        v = vh.T
+        v_tuple= tuple( np.hsplit(v, v.shape[1]) )
+        #print(u_tuple,'\n\n\n')
+        for i in range(len(v_tuple)):
+            if i==0:
+                A = v_tuple[i]
+            else:
+                A = np.hstack((A, v_tuple[i]))
+        '''
+        A = np.vstack((A,-A))
+        #print(A)
+        b = np.array([[3],
+                      [2],
+                      [3],
+                      [2]])
+        '''
+        b = np.array([[3],
+                      [2]])
+        rst = np.linalg.inv(A.T.dot(A)).dot(A.T).dot(b)
+        print(rst)
+
+    def stiffness_polytobe(self):
+        W_tau = np.array([[3,0],
+                          [0,2]])
+        Kc = np.array([[1000, 200],
+                       [200, 2000]])
+        H = np.linalg.inv(self.jacob_matrix[:2,:].T).dot(W_tau)
+        S = np.array([[1,1],
+                      [1,-1],
+                      [-1,1],
+                      [-1,-1]])
+
+        temp = S.dot(H.T)
+        #print(temp.shape)
+        rst = np.linalg.inv(Kc).dot(temp.T)
+        #rst = rst[:,rst[0].argsort()]
+        vertices = [(rst[0,0], rst[1,0]), (rst[0,1], rst[1,1]), (rst[0,2], rst[1,2]), (rst[0,3], rst[1,3])]
+        start_p = np.array(vertices[0])
+        vertices.remove(vertices[0])
+        #set_trace()
+
+        for temp_p in vertices:
+
+            temp = np.array([temp_p[0]-start_p[0], temp_p[1]-start_p[1]])
+            temp_list = copy.deepcopy(vertices)
+
+            temp_list.remove(temp_p)
+            temp2 = np.array((temp_list[0][0]-start_p[0],temp_list[0][1]-start_p[1]))
+            temp3 = np.array((temp_list[1][0]-start_p[0],temp_list[1][1]-start_p[1]))
+            if np.cross(temp, temp2) *  np.cross(temp, temp3) >0:
+                second_p = temp_p
+        vertices.remove(second_p)
+
+        for temp_p in vertices:
+
+            temp = np.array([temp_p[0]-second_p[0], temp_p[1]-second_p[1]])
+            temp_list = copy.deepcopy(vertices)
+            temp_list.append(start_p)
+
+            temp_list.remove(temp_p)
+            temp2 = np.array([temp_list[0][0]-second_p[0],temp_list[0][1]-second_p[1]])
+            temp3 = np.array((temp_list[1][0]-second_p[0],temp_list[1][1]-second_p[1]))
+            if np.cross(temp, temp2) *  np.cross(temp, temp3) >0:
+                third_p = temp_p
+                break
+            else:
+                third_p = []
+
+        vertices.remove(third_p)
+        fourth_p = vertices[0]
+
+        rst = [[start_p[0], second_p[0], third_p[0], fourth_p[0],start_p[0]],
+               [start_p[1], second_p[1], third_p[1], fourth_p[1],start_p[1]]]
+
+        return rst
 
     def visualize(self):
         x=[]
