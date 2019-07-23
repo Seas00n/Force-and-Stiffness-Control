@@ -54,7 +54,7 @@ class armStructure(object):
     def moveIt(self, joint_list):
         assert len(joint_list) == self.num_links-1
         for i in range(1, self.num_links):
-            self.links[i].moveIt(joint_list[i-1])
+            self.links[i].moveIt(joint_list[i-1]*180.0/np.pi)
 
         self.resetTMatrix()
         self.forwardKinematics()
@@ -65,7 +65,7 @@ class armStructure(object):
         delta_joint_variable = inverseJacobianXYPos.dot(np.array([[delty[0]],[delty[1]]]))
         q_list = []
         for i in range(self.num_links-1):
-            res = self.links[i+1].getJointAngle() + float(delta_joint_variable[i])
+            res = self.links[i+1].getJointAngle()/180.0*np.pi + float(delta_joint_variable[i])
             q_list.append(res)
         return q_list
 
