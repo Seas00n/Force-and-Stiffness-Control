@@ -5,4 +5,4 @@ More details contain in pdf files.
 
 ![image](images/figure0.png)
 
-![image](images/figure1.png)
+![image](images/figure2.png)
