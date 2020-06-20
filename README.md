@@ -3,6 +3,6 @@ Reproduce results of published paper "A. Ajoudani, N. G. Tsagarakis and A. Bicch
 
 More details contain in pdf files.
 
-https://github.com/jiemingChen/Force-and-Stiffness-Control.git/images/figure0.png
+![image](https://github.com/jiemingChen/Force-and-Stiffness-Control.git/images/figure0.png)
 
-https://github.com/jiemingChen/Force-and-Stiffness-Control.git/images/figure1.png
+![image](https://github.com/jiemingChen/Force-and-Stiffness-Control.git/images/figure1.png)
