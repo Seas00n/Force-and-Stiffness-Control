@@ -7,10 +7,10 @@ xlabel('x');
 ylabel('y');
 ellpsoid1 = get_sfe(q_initial);
 ellpsoid2 = get_sfe(q_res);
-e1 = plot( ellpsoid1(1,:)+points_initial(5,1), ellpsoid1(2,:)+points_initial(5,2), '--', 'Color','#0072BD');
+e1 = plot( ellpsoid1(1,:)+points_initial(5,1), ellpsoid1(2,:)+points_initial(5,2), '--', 'Color','r');
 e1.LineWidth = 2;
 hold on;
-e2=plot(ellpsoid2(1,:)+points_initial(5,1), ellpsoid2(2,:)+points_initial(5,2), 'Color','#D95319');
+e2=plot(ellpsoid2(1,:)+points_initial(5,1), ellpsoid2(2,:)+points_initial(5,2), 'Color','g');
 e2.LineWidth = 2;
 
  hold on;
